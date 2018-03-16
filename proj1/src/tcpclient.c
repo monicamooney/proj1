@@ -1,6 +1,6 @@
 /* tcp_ client.c */ 
-/* Programmed by Adarsh Sethi */
-/* February 21, 2018 */     
+/* Programmed by Matt Andreas and Monica Mooney */
+/* March 22, 2018 */
 
 #include "main.h"
 #include <stdio.h>          /* for standard I/O functions */
@@ -12,8 +12,8 @@
 #include <unistd.h>         /* for close */
 
 #define STRING_SIZE 80
-#define HOSTNAME "cisc450.cis.udel.edu"
-#define PORT_NUM 46464
+#define HOSTNAME "cisc450.cis.udel.edu" /* Server's hostname */
+#define PORT_NUM 46464 /* Port number used by server (remote port) */
 
 int main(void) {
 
@@ -23,15 +23,12 @@ int main(void) {
                                         stores server address */
    struct hostent * server_hp;      /* Structure to store server's IP
                                         address */
-   //char HOSTNAME[STRING_SIZE]; /* Server's hostname */
-   //unsigned short PORT_NUM;  /* Port number used by server (remote port) */
-
    char filename[STRING_SIZE];  /* send message */
    char line_fromfile[STRING_SIZE]; /* receive message */
    unsigned int msg_len;  /* length of message */                      
    int bytes_sent, bytes_recd; /* number of bytes sent or received */
   
-   /* open a socket */
+   /* OPEN SOCKET */
 
    if ((sock_client = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
       perror("Client: can't open stream socket");
@@ -45,27 +42,28 @@ int main(void) {
             when the connect function is called later, if the socket has not
             already been bound. */
 
-   /* initialize server address information */
+   /* INITIALIZE SERVER:
+    * address information */
 
-   printf("Enter hostname of server: ");
-   scanf("%s", HOSTNAME);
+   printf("The server hostname is: %s \n", HOSTNAME);
    if ((server_hp = gethostbyname(HOSTNAME)) == NULL) {
       perror("Client: invalid server hostname");
       close(sock_client);
       exit(1);
    }
 
-   printf("Enter port number for server: ");
-   //scanf("%hu", &PORT_NUM);
+   printf("The server port number is: %d \n", PORT_NUM);
 
-   /* Clear server address structure and initialize with server address */
+   /* INITIALIZE SERVER:
+    * clear server address structure and initialize with server address */
+
    memset(&server_addr, 0, sizeof(server_addr));
    server_addr.sin_family = AF_INET;
    memcpy((char *)&server_addr.sin_addr, server_hp->h_addr,
                                     server_hp->h_length);
    server_addr.sin_port = htons(PORT_NUM);
 
-    /* connect to the server */
+    /* CONNECT TO SERVER */
  		
    if (connect(sock_client, (struct sockaddr *) &server_addr, 
                                     sizeof (server_addr)) < 0) {
@@ -74,25 +72,27 @@ int main(void) {
       exit(1);
    }
   
-   /* user interface */
+   /* USER INTERFACE */
 
    printf("Please input a filename:\n");
    scanf("%s", filename);
    
-   
-   
-   msg_len = strlen(filename) + 1;
+   PACKET *p_packet=malloc(sizeof(*p_packet)); //create a packet struct
 
-   /* send message (the filename) */
+   /* SEND MESSAGE (the filename) */
    
-   //bytes_sent = send(sock_client, structAddr, sizeof(p_packet), 0);
+   *p_packet->filename=filename; //set the filename for the packet
 
-   /* get response from server (the contents of the file) */
+   bytes_sent = send(sock_client, &p_packet, sizeof(p_packet), 0);
+   //sock_client sends the address of the packet and its' size, with no extra info
+
+
+   /* GET RESPONSE from server (the contents of the file) */
   
-   bytes_recd = recv(sock_client, line_fromfile, STRING_SIZE, 0);
+   //bytes_recd = recv(sock_client, line_fromfile, STRING_SIZE, 0);
 
    printf("\nServer responding...\n");
-   printf("%s\n\n", line_fromfile);
+   //printf("%s\n\n", line_fromfile);
 
    /* close the socket */
 

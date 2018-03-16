@@ -13,6 +13,6 @@ typedef struct{
 	int sequence_num;
 	int count;
 	char message[1024];
-}packet, *p_packet;
+}PACKET;
 
 #endif /* MAIN_H_ */
