@@ -54,6 +54,13 @@ int main(void) {
 
    printf("The server port number is: %d \n", PORT_NUM);
 
+
+   /* USER INTERFACE */
+
+   //Client prompts user for filename
+   printf("Please input a filename:\n");
+   scanf("%s", filename);
+
    /* INITIALIZE SERVER:
     * clear server address structure and initialize with server address */
 
@@ -65,31 +72,28 @@ int main(void) {
 
     /* CONNECT TO SERVER */
  		
+   //Client sends a connection request
    if (connect(sock_client, (struct sockaddr *) &server_addr, 
                                     sizeof (server_addr)) < 0) {
       perror("Client: can't connect to server");
       close(sock_client);
       exit(1);
    }
-  
-   /* USER INTERFACE */
-
-   printf("Please input a filename:\n");
-   scanf("%s", filename);
    
    PACKET *p_packet=malloc(sizeof(*p_packet)); //create a packet struct
 
    /* SEND MESSAGE (the filename) */
    
+   //When connection is established, client sends filename to server
    *p_packet->filename=filename; //set the filename for the packet
 
    bytes_sent = send(sock_client, &p_packet, sizeof(p_packet), 0);
-   //sock_client sends the address of the packet and its' size, with no extra info
+   //send the packet (only information = filename)
 
 
    /* GET RESPONSE from server (the contents of the file) */
   
-   //bytes_recd = recv(sock_client, line_fromfile, STRING_SIZE, 0);
+   bytes_recd = recv(sock_client, line_fromfile, STRING_SIZE, 0);
 
    printf("\nServer responding...\n");
    //printf("%s\n\n", line_fromfile);
