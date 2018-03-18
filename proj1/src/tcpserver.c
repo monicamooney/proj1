@@ -68,8 +68,8 @@ int main(void) {
 
 	/* listen for incoming requests from clients*/
 
-	if (listen(sock_server, 50) < 0) {     50 is the max number of pending
-		perror("Server: error on listen");  requests that will be queued
+	if (listen(sock_server, 50) < 0) {     //50 is the max number of pending
+		perror("Server: error on listen");  //requests that will be queued
 		close(sock_server);
 		exit(1);
 	}
