@@ -1,4 +1,4 @@
-/* tcp_ client.c */ 
+/* tcp_ client.c */
 /* Programmed by Matt Andreas and Monica Mooney */
 /* March 22, 2018 */
 
@@ -15,7 +15,7 @@
 #define HOSTNAME "cisc450.cis.udel.edu" /* Server's hostname */
 #define PORT_NUM 46464 /* Port number used by server (remote port) */
 
-int main2(void) {
+int main(void) {
 
 	int sock_client;  /* Socket used by client */
 
@@ -85,15 +85,23 @@ int main2(void) {
 	//When connection is established, client sends filename to server
 	bytes_sent = send(sock_client, filename, filename_len, 0);
 
+	FILE *file;
+	file = fopen("output.txt", "w");
 	/* GET RESPONSE from server (the contents of the file) */
-
-	//TODO
-	//bytes_recd = recv(sock_client, output, STRING_SIZE, 0);
-
+	if (file) {
+		do {
+			int * header;
+			bytes_recd = recv(sock_client, header, 2, 0);
+			bytes_recd = recv(sock_client, line_fromfile, header[1], 0);
+		} while (fprintf(file, line_fromfile) > 0);
+	}
+	if (ferror(file)) {
+		/* deal with error */
+	}
 	printf("\nServer responding...\n");
-	//printf("%s\n\n", line_fromfile);
 
 	/* close the socket */
 
 	close (sock_client);
 }
+
