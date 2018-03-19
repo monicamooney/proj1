@@ -9,6 +9,7 @@
 #include <sys/socket.h>     /* for socket, bind, listen, accept */
 #include <netinet/in.h>     /* for sockaddr_in */
 #include <unistd.h>         /* for close */
+#include "datastruct.h"
 
 #define STRING_SIZE 1024
 
@@ -16,8 +17,7 @@
    incoming requests from clients. You should change this to a different
    number to prevent conflicts with others in the class. */
 
-#define SERV_TCP_PORT 65000
-#define CHUNK 2
+#define SERV_TCP_PORT 646464
 
 int main(void) {
 
@@ -95,7 +95,7 @@ int main(void) {
 		bytes_recd = recv(sock_connection, sentence, STRING_SIZE, 0);
 
 		if (bytes_recd > 0){
-			printf("Received Sentence is:\n");
+			printf("Received file is:\n");
 			printf("%s", sentence);
 			printf("\nwith length %d\n\n", bytes_recd);
 
@@ -114,15 +114,15 @@ int main(void) {
 			int seqnum = -1;
 			int read;
 			if (file) {
-				while (read = getline(&line, &linelen, file) != -1) {
+				while (getline(&line, &linelen, file) > 0) {
 					int header[2] = {seqnum++, linelen};
 					bytes_sent = send(sock_connection, header, 2, 0);
 					bytes_sent = send(sock_connection, line, linelen, 0);
 				}
 				//SEND FINAL MESSAGE
-				int header[2] = {seqnum++, linelen};
+				int header[2] = {seqnum++, 0};
 				bytes_sent = send(sock_connection, header, 2, 0);
-				bytes_sent = send(sock_connection, line, 80, 0);
+				bytes_sent = send(sock_connection, '', 0, 0);
 			}
 			if (ferror(file)) {
 				/* deal with error */
