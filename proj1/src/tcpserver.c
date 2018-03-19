@@ -17,7 +17,7 @@
    incoming requests from clients. You should change this to a different
    number to prevent conflicts with others in the class. */
 
-#define SERV_TCP_PORT 646464
+#define SERV_TCP_PORT 46464
 
 int main(void) {
 
@@ -91,9 +91,9 @@ int main(void) {
 		}
 
 		/* receive the message */
-
+    printf("Here\n");
 		bytes_recd = recv(sock_connection, sentence, STRING_SIZE, 0);
-
+    printf("Here:\n");
 		if (bytes_recd > 0){
 			printf("Received file is:\n");
 			printf("%s", sentence);
@@ -108,21 +108,24 @@ int main(void) {
 
 			/* send message */
 			FILE *file;
-			file = fopen(string(sentence), "r");
+			file = fopen(sentence, "r");
 			char * line = NULL;
-			int linelen = -1;
-			int seqnum = -1;
-			int read;
+			size_t linelen = -1;
+      size_t headersize = 2;
+			uint32_t seqnum = -1;
 			if (file) {
 				while (getline(&line, &linelen, file) > 0) {
-					int header[2] = {seqnum++, linelen};
-					bytes_sent = send(sock_connection, header, 2, 0);
+			    printf("Read line is:\n");
+			    printf("%s", line);
+					uint32_t header[2] = {seqnum++, (uint32_t) linelen};
+					bytes_sent = send(sock_connection, htons(header), headersize, 0);
 					bytes_sent = send(sock_connection, line, linelen, 0);
+          printf("Sent line is:\n");
+			    printf("%s", line);
 				}
 				//SEND FINAL MESSAGE
-				int header[2] = {seqnum++, 0};
-				bytes_sent = send(sock_connection, header, 2, 0);
-				bytes_sent = send(sock_connection, '', 0, 0);
+				uint32_t header[2] = {seqnum++, 0};
+				bytes_sent = send(sock_connection, htons(header), 2, 0);
 			}
 			if (ferror(file)) {
 				/* deal with error */
