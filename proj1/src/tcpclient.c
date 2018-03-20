@@ -25,7 +25,6 @@ int main(void) {
                                         address */
 	char filename[STRING_SIZE];  /* send message */
 	char line_fromfile[STRING_SIZE]; /* receive message */
-	uint32_t filename_len;  /* length of message */
 	int bytes_sent, bytes_recd; /* number of bytes sent or received */
 
 	/* OPEN SOCKET */
@@ -79,16 +78,13 @@ int main(void) {
 		perror("Client: can't connect to server");
 		close(sock_client);
 		exit(1);
-	}else{
-		printf("error with the connection request \n");
 	}
-
 	printf("after if \n");
 
 	/* SEND MESSAGE (the filename) */
 
 	//When connection is established, client sends filename to server
-	bytes_sent = send(sock_client, filename, STRING_SIZE, 0);
+	bytes_sent = send(sock_client, filename, sizeof(filename), 0);
 
 	FILE *file;
 	file = fopen("output.txt", "w");
@@ -96,24 +92,23 @@ int main(void) {
 	printf("response received \n");
 	if (file) {
 		do {
-			uint32_t *header;
+			unsigned short header[STRING_SIZE];
 			printf("before recv statement \n");
-			bytes_recd = recv(sock_client, header, 2, 0);
-			printf("bytes_recd: %d /n", bytes_recd);
-			if (ntohs(header[1])  == 0)
+			bytes_recd = recv(sock_client, header, STRING_SIZE, 0);
+			printf("bytes_recd: %d \n", bytes_recd);
+			if (ntohs(header[1]) == 0)
 				break;
-			bytes_recd = recv(sock_client, line_fromfile, header[1], 0);
+			bytes_recd = recv(sock_client, line_fromfile, ntohs(header[1]), 0);
 			printf("Received line is:\n");
-			printf("%s", line_fromfile);
-		} while (fprintf(file, line_fromfile));
+			printf("%s \n", line_fromfile);
+		} while (fprintf(file, line_fromfile) > 0);
 	}
 	if (ferror(file)) {
 		/* deal with error */
 	}
-	printf("\nServer responding...\n");
+	printf("\nExiting\n");
 
 	/* close the socket */
 
 	close (sock_client);
 }
-
