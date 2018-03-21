@@ -97,11 +97,11 @@ int main(void) {
 			printf("\nwith length %d\n\n", bytes_recd);
 			/* send message */
 			FILE *file;
+			char * line;	// A pointer to the line that will be read in
+			unsigned short seqnum = 0;	// Sequence number of the packet to be sent
+			size_t linelen = 0;	// The length of the line to be read in
 			file = fopen(sentence, "r");	// The file to read in
 			if (file) {
-				char * line;	// A pointer to the line that will be read in
-				unsigned short seqnum = 0;	// Sequence number of the packet to be sent
-				size_t linelen = 0;	// The length of the line to be read in
 				while (getline(&line, &linelen, file) > 0) {	
 					/* Getting the next line, continuously going until no more lines left */
 					printf("Read line is:\n");
