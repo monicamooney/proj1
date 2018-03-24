@@ -70,7 +70,6 @@ int main(void) {
 	server_addr.sin_port = htons(PORT_NUM);
 
 	/* CONNECT TO SERVER */
-	printf("before if \n");
 
 	//Client sends a connection request
 	if (connect(sock_client, (struct sockaddr *) &server_addr,
@@ -79,7 +78,6 @@ int main(void) {
 		close(sock_client);
 		exit(1);
 	}
-	printf("after if \n");
 
 	/* SEND MESSAGE (the filename) */
 
@@ -89,19 +87,20 @@ int main(void) {
 	FILE *file;
 	file = fopen("output.txt", "w");
 	/* GET RESPONSE from server (the contents of the file) */
-	printf("response received \n");
 	if (file) {
 		do {
-			unsigned short header[STRING_SIZE];
-			printf("before recv statement \n");
-			bytes_recd = recv(sock_client, header, STRING_SIZE, 0);
-			printf("bytes_recd: %d \n", bytes_recd);
-			if (ntohs(header[1]) == 0)
+			unsigned short header[2];
+			bytes_recd = recv(sock_client, header, 4, 0);
+			printf("bytes_recd for header: %d \n", bytes_recd);
+			header[0] = ntohs(header[0]);
+			header[1] = ntohs(header[1]);
+			if (header[1] == 0)
 				break;
-			bytes_recd = recv(sock_client, line_fromfile, ntohs(header[1]), 0);
-			printf("Received line is:\n");
-			printf("%s \n", line_fromfile);
-		} while (fprintf(file, line_fromfile) > 0);
+			bytes_recd = recv(sock_client, line_fromfile, header[1], 0);
+			printf("Received line is: %s \n", line_fromfile);
+			printf("With length: %d \n", header[1]);
+			printf("And sequence: %d \n\n", header[0]);
+		} while (fprintf(file, line_fromfile));
 	}
 	if (ferror(file)) {
 		/* deal with error */
