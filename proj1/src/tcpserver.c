@@ -102,21 +102,23 @@ int main(void) {
 			size_t linelen = 0;	// The length of the line to be read in
 			file = fopen(sentence, "r");	// The file to read in
 			if (file) {
-				while (getline(&line, &linelen, file) > 0) {	
+				while (getline(&line, &linelen, file) > 0) {
 					/* Getting the next line, continuously going until no more lines left */
 					printf("Read line is:\n");
 					printf("%s", line);
-					unsigned short header[2] = {htons((seqnum++)-1), htons((unsigned short) linelen)};
+					unsigned short header[2] = {htons(seqnum++), htons((unsigned short) linelen)};
 					/* This header contains the sequence number in the [0] position and
 					 * the line length in the [1] position. Both of these consist of unsigned short
 					 * integers. The integers are converted to Network Order by the htons() function.
 					 * The header is now ready to be sent. */
 					bytes_sent = send(sock_connection, header, sizeof(header), 0);
+					printf("bytes_sent for header: %d \n", bytes_sent);
 					/* The header is sent using the send() function to the client */
 					bytes_sent = send(sock_connection, line, linelen, 0);
+					printf("bytes_sent for line: %d \n", bytes_sent);
 					/* Send the line read in */
 					printf("Sent line is:\n");
-					printf("%s", line);
+					printf("%s\n", line);
 				} // No more lines
 				unsigned short header[2] = {htons((seqnum++)-1), htons(0)};
 				/* After all of the lines are read through, a header is sent
@@ -127,7 +129,7 @@ int main(void) {
 			}
 			printf("All lines sent\n");
 			if (ferror(file)) {	// If there is a file error
-				close(sock_connection); 
+				close(sock_connection);
 				exit(1);
 				/* Close the connection and exit */
 			}
