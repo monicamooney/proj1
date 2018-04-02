@@ -9,7 +9,6 @@
 #include <sys/socket.h>     /* for socket, bind, listen, accept */
 #include <netinet/in.h>     /* for sockaddr_in */
 #include <unistd.h>         /* for close */
-#include "datastruct.h"
 
 #define STRING_SIZE 1024
 
@@ -33,9 +32,6 @@ int main(void) {
                                         stores client address */
 	unsigned int client_addr_len;  /* Length of client address structure */
 
-	char sentence[STRING_SIZE];  /* receive message */
-	char modifiedSentence[STRING_SIZE]; /* send message */
-	int bytes_sent, bytes_recd; /* number of bytes sent or received */
 	unsigned int i;  /* temporary loop variable */
 
 	/* open a socket */
@@ -90,51 +86,61 @@ int main(void) {
 		}
 
 		/* receive the message */
-		bytes_recd = recv(sock_connection, sentence, STRING_SIZE, 0);
-		if (bytes_recd > 0){
-			printf("Received file is:\n");
-			printf("%s", sentence);
-			printf("\nwith length %d\n\n", bytes_recd);
-			/* send message */
-			FILE *file;
-			char * line;	// A pointer to the line that will be read in
-			unsigned short seqnum = 0;	// Sequence number of the packet to be sent
-			size_t linelen = 0;	// The length of the line to be read in
-			file = fopen(sentence, "r");	// The file to read in
-			if (file) {
-				while (getline(&line, &linelen, file) > 0) {
-					/* Getting the next line, continuously going until no more lines left */
-					printf("Read line is:\n");
-					printf("%s", line);
-					unsigned short header[2] = {htons(seqnum++), htons((unsigned short) linelen)};
-					/* This header contains the sequence number in the [0] position and
-					 * the line length in the [1] position. Both of these consist of unsigned short
-					 * integers. The integers are converted to Network Order by the htons() function.
-					 * The header is now ready to be sent. */
-					bytes_sent = send(sock_connection, header, sizeof(header), 0);
-					printf("bytes_sent for header: %d \n", bytes_sent);
-					/* The header is sent using the send() function to the client */
-					bytes_sent = send(sock_connection, line, linelen, 0);
-					printf("bytes_sent for line: %d \n", bytes_sent);
-					/* Send the line read in */
-					printf("Sent line is:\n");
-					printf("%s\n", line);
-				} // No more lines
-				unsigned short header[2] = {htons((seqnum++)-1), htons(0)};
-				/* After all of the lines are read through, a header is sent
-				 * with a data-size of the next line as 0 indicating no more lines
-				 * left, and the sequence value is incremented */
-				bytes_sent = send(sock_connection, header, sizeof(header), 0);
-				/* Send the header, indicating communication is done */
-			}
-			printf("All lines sent\n");
-			if (ferror(file)) {	// If there is a file error
-				close(sock_connection);
-				exit(1);
-				/* Close the connection and exit */
-			}
-			fclose(file);	// Close the file
+		char sentence[STRING_SIZE];  /* receive message */
+		int bytes_sent, bytes_recd; /* number of bytes sent or received */
+		unsigned short header[2];
+		int seqnum ,linelen;	// The length of the line to be read in
+		if ((bytes_recd = recv(sock_connection, header, 4, 0)) != 4  || (seqnum = ntohs(header[0])) != 0 || (linelen = ntohs(header[1])) < 0) {
+			printf("Error on client side\n");
+			break;
 		}
+		sentence[linelen] = '\0';
+		if ((bytes_recd = recv(sock_connection, sentence, linelen, 0)) != linelen) {
+			printf("bytes_recd is different from linelen, error\n");
+			break;
+		}
+		printf("Packet %d with %d data bytes received for the filename\n", seqnum, linelen);
+		/* send message */
+		int totalbytes = 0;
+		FILE *file;
+		char *line = sentence;	// A pointer to the line that will be read in
+		size_t buff = STRING_SIZE;	// Buffer size
+		file = fopen(sentence, "r");	// The file to read in
+		if (file) {
+			for (seqnum++; (linelen = getline(&line, &buff, file)) > 0; seqnum++) {
+				/* Getting the next line, continuously going until no more lines left */
+				unsigned short header[2] = {htons((unsigned short)seqnum), htons((unsigned short)linelen)};
+				/* This header contains the sequence number in the [0] position and
+				 * the line length in the [1] position. Both of these consist of unsigned short
+				 * integers. The integers are converted to Network Order by the htons() function.
+				 * The header is now ready to be sent. */
+				if ((bytes_sent = send(sock_connection, header, sizeof(header), 0)) < 1 || (bytes_sent = send(sock_connection, line, linelen, 0)) < 1) {
+					printf("Error sending line, exiting\n");
+					close (sock_connection);
+					exit(1);
+				}
+				printf("Packet %d with %d data bytes sent\n", seqnum, linelen);
+				totalbytes += linelen;
+			} // No more lines
+			unsigned short header[2] = {htons(seqnum), htons(0)};
+			/* After all of the lines are read through, a header is sent
+			 * with a data-size of the next line as 0 indicating no more lines
+			 * left, and the sequence value is incremented */
+			if ((bytes_sent = send(sock_connection, header, sizeof(header), 0)) != 4) {
+				printf("Error sending final message. Exiting");
+				close (sock_connection);
+				exit(1);
+			}
+			printf("End of Transmission Packet with sequence number %d transmitted with 0 data bytes\n", seqnum);
+			printf("Total number of packets sent: %d\n", seqnum-1);
+			printf("Total number of data bytes sent: %d\n", totalbytes);
+		}
+		if (ferror(file)) {	// If there is a file error
+			close(sock_connection);
+			exit(1);
+			/* Close the connection and exit */
+		}
+		fclose(file);	// Close the file
 		break;	// Break out of the loop
 	}
 	/* close the socket */
