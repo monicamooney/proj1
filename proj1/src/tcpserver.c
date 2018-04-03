@@ -88,45 +88,58 @@ int main(void) {
 		/* receive the message */
 		char sentence[STRING_SIZE];  /* receive message */
 		int bytes_sent, bytes_recd; /* number of bytes sent or received */
-		unsigned short header[2];
+		unsigned short header[2];	// The header that the filename info will be held in
 		int seqnum ,linelen;	// The length of the line to be read in
 		if ((bytes_recd = recv(sock_connection, header, 4, 0)) != 4  || (seqnum = ntohs(header[0])) != 0 || (linelen = ntohs(header[1])) < 0) {
+			/* The recv function will place the header into the header array. The seqnum
+			 * and linelen are converted from network byte order to host byte order. These
+			 * happen while simultaneously checking for errors, such as the header not
+			 * being of length 4, the seqnum not being the first in the sequence, and the
+			 * linelen being less that zero. If any of these errors occur, exit the script. */
 			printf("Error on client side\n");
 			break;
 		}
-		sentence[linelen] = '\0';
+		sentence[linelen] = '\0';	// Declaring buffer size
 		if ((bytes_recd = recv(sock_connection, sentence, linelen, 0)) != linelen) {
+			/* Receive the filename with the length preset in linelen. If
+			 * the amount of bytes received is different than the linelen
+			 * sent through the header, than there is an error and the script
+			 * should stop. */
 			printf("bytes_recd is different from linelen, error\n");
 			break;
 		}
 		printf("Packet %d with %d data bytes received for the filename\n", seqnum, linelen);
 		/* send message */
-		int totalbytes = 0;
-		FILE *file;
+		int totalbytes = 0;	// Total bytes of data sent
+		FILE *file;	// Pointer to the file to read in
 		char *line = sentence;	// A pointer to the line that will be read in
 		size_t buff = STRING_SIZE;	// Buffer size
 		file = fopen(sentence, "r");	// The file to read in
 		if (file) {
 			for (seqnum++; (linelen = getline(&line, &buff, file)) > 0; seqnum++) {
-				/* Getting the next line, continuously going until no more lines left */
+				/* Getting the next line, continuously going until no more lines left, increasing the seqnum each iteration */
 				unsigned short header[2] = {htons((unsigned short)seqnum), htons((unsigned short)linelen)};
 				/* This header contains the sequence number in the [0] position and
 				 * the line length in the [1] position. Both of these consist of unsigned short
 				 * integers. The integers are converted to Network Order by the htons() function.
 				 * The header is now ready to be sent. */
-				if ((bytes_sent = send(sock_connection, header, sizeof(header), 0)) < 1 || (bytes_sent = send(sock_connection, line, linelen, 0)) < 1) {
+				if ((bytes_sent = send(sock_connection, header, sizeof(header), 0)) != 4 || (bytes_sent = send(sock_connection, line, linelen, 0)) != linelen) {
+					/* Send the header and the line with the number of bytes to send equal to the
+					 * linelen in the header. If either function send less than 1 byte, there is an error
+					 * and the script should stop. */
 					printf("Error sending line, exiting\n");
 					close (sock_connection);
 					exit(1);
 				}
 				printf("Packet %d with %d data bytes sent\n", seqnum, linelen);
-				totalbytes += linelen;
+				totalbytes += linelen;	// Add the number of bytes just sent to the total bytes
 			} // No more lines
 			unsigned short header[2] = {htons(seqnum), htons(0)};
 			/* After all of the lines are read through, a header is sent
 			 * with a data-size of the next line as 0 indicating no more lines
 			 * left, and the sequence value is incremented */
 			if ((bytes_sent = send(sock_connection, header, sizeof(header), 0)) != 4) {
+				/* Send the final header, making sure only 4 bytes are sent. */
 				printf("Error sending final message. Exiting");
 				close (sock_connection);
 				exit(1);
