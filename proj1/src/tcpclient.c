@@ -1,4 +1,4 @@
-/* tcp_ client.c */
+/* tcpclient.c */
 /* Programmed by Matt Andreas and Monica Mooney */
 /* March 22, 2018 */
 
@@ -86,26 +86,37 @@ int main(void) {
 	 * the line length in the [1] position. Both of these consist of unsigned short
 	 * integers. The integers are converted to Network Order by the htons() function.
 	 * The header is now ready to be sent. */
-	if ((bytes_sent = send(sock_client, header, sizeof(header), 0)) < 1 || (bytes_sent = send(sock_client, filename, linelen, 0)) < 1) {
+	if ((bytes_sent = send(sock_client, header, sizeof(header), 0)) != 4 || (bytes_sent = send(sock_client, filename, linelen, 0)) != linelen) {
+		/* Send the header and the filename while simultaneously checking for errors. If the
+		 * header is not 4 bytes or the bytes sent for the filename is not equal to the length
+		 * of the filename, there is an error. */
 		printf("Error sending filename, exiting\n");
 		close (sock_client);
 		exit(1);
 	}
 	printf("Packet %d with %d data bytes sent for the filename\n", seqnum, linelen);
-	int totalbytes = 0;
-	FILE * file;
-	char line_fromfile[STRING_SIZE];	// A pointer to the line that will be read in
-	file = fopen("output.txt", "w");
+	int totalbytes = 0;	// Keep track of total bytes received
+	FILE * file;	// Pointer to the file to write to
+	char line_fromfile[STRING_SIZE];	// A pointer to the line that will be received
+	file = fopen("output.txt", "w");	// File to write to
 	/* GET RESPONSE from server (the contents of the file) */
 	if (file) {
 		do {
-			unsigned short header[2];
-			int prevseq;
+			unsigned short header[2];	// The header that the line info will be held in
+			int prevseq;	// Keep track of the previous seqnum for error checking
 			if ((bytes_recd = recv(sock_client, header, 4, 0)) != 4 || (prevseq = seqnum) != ((seqnum = ntohs(header[0])) - 1) || (linelen = ntohs(header[1])) < 0) {
+				/* Receive the header and convert the seqnum and linelen to host order
+				 * while simultaneously checking for errors. If the header is not 4 bytes long,
+				 * the seqnum is not one more than the previous, or the linelen is less than zero,
+				 * then there is an error. */
 				printf("Error on server side\n");
 				break;
 			}
 			else if (linelen == 0) {
+				/* If the linelen is equal to zero, then that signifies that all the 
+				 * lines have been sent. There is no line to be received so the script
+				 * should exit.
+				 */
 				printf("End of Transmission Packet with sequence number %d received with %d data bytes\n", seqnum, linelen);
 				printf("Total number of packets received: %d\n", seqnum-1);
 				printf("Total number of data bytes received: %d\n", totalbytes);
@@ -113,12 +124,15 @@ int main(void) {
 			}
 			line_fromfile[linelen] = '\0';	// Declaring buffer size
 			if ((bytes_recd = recv(sock_client, line_fromfile, linelen, 0)) != linelen) {
+				/* Receive the line to write while simultaneously checking for
+				 * errors. If the bytes received is not the same as the linelen previously set 
+				 * in the header, then there is an error and the script should stop. */
 				printf("bytes_recd is different from linelen, error\n");
 				break;
 			}
 			printf("Packet %d with %d data bytes received\n", seqnum, linelen);
-			totalbytes += linelen;
-		} while (fputs(line_fromfile, file) > 0);
+			totalbytes += linelen;	// Add bytes received to total
+		} while (fputs(line_fromfile, file) > 0);	// Write line to file
 		fclose(file);	// Close the file
 	}
 	else if (ferror(file)) 	// If there is a file error
